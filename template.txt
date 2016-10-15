@@ -1,0 +1,14 @@
+#Unigrams
+
+#previous word
+U00:%x[-1,0]
+#current word
+U01:%x[0,0]
+#next word
+U02:%x[1,0]
+
+#feature-1
+U03:%x[0,1]
+
+#Bigram
+B
