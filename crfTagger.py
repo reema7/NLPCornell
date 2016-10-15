@@ -6,9 +6,9 @@ from nltk.tag import hmm
 
 
 import csv
-
-
 from nltk.tag import CRFTagger
+import pycrfsuite
+#from nltk.tag import CRFTagger
 
 def preProcessing(pathToTrainingData):
     outputFile = open("processedFile.txt","w")
@@ -66,10 +66,8 @@ def preProcessingOld(pathToTrainingData):
                 else:
                     isCueFirst = True
                     tokens[2] = outsideTag
-                stringJoin1 = tokens[0]
-                stringJoin2 = tokens[2]
-                tupple = (stringJoin1.decode('utf-8'), stringJoin2.decode('utf-8'))
-                lineList.append(tupple)
+                join = tokens[0]+" "+tokens[1]+" "+tokens[2]
+                lineList.append(join)
                 if (tokens[0] is "."):
                     trainingList.append(lineList)
                     lineList = []
@@ -96,12 +94,49 @@ def preprocessForTagging(testFolder):
                         sentence.append(lineTokens[0].decode('utf-8'))
     return listSentences
 
+def convertCRFFormatFeatures(sent):
+    features = []
+    for line in sent:
+        featureList = []
+        tokens = line.split()
+        if(len(tokens)==2):
+            word = tokens[0]
+            featureList.append("WORD" + word)
+            featureList.append(tokens[1])
+            features.append(featureList)
+    return features
 
 
-def performTagging(ct, testFolder):
+def convertCRFFormat(sent):
+    labels = []
+    features = []
+    result = {}
+    for line in sent:
+        featureList = []
+        tokens = line.split()
+        labels.append(tokens[2])
+        word = tokens[0]
+        featureList.append("WORD"+word)
+        featureList.append(tokens[1])
+        features.append(featureList)
+    result['labels'] = labels
+    result['features'] = features
+    return  result
 
+def newTagging(tagger,testFolder):
+    result = []
     testSentences = preprocessForTagging(testFolder)
-    taggedSentences = ct.tag_sents(testSentences)
+    for tokens in testSentences:
+        features = convertCRFFormatFeatures(tokens)
+        labels = tagger.tag(features)
+        taggedSentence = list(zip(tokens,labels))
+        result.append(taggedSentence)
+    return result
+
+def performTagging(tagger, testFolder):
+
+    taggedSentences = newTagging(tagger,testFolder)
+    print(taggedSentences)
     tag = "null"
     tokenId = 0
     uncertainRanges = ""
@@ -127,27 +162,43 @@ def performTagging(ct, testFolder):
     #returnData["sentenceRanges"] = uncertainSentenceRange
     return returnData
 
-pathToTrainingData = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/train"
+pathToTrainingData = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/train"
+#pathToTrainingData = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/train"
 processedTokens = preProcessingOld(pathToTrainingData)
-ct = CRFTagger()
-ct.train(processedTokens,'model.crf.tagger')
+trainer = pycrfsuite.Trainer(verbose = False)
+trainer.set_params({})
+
+for sent in processedTokens:
+    result = convertCRFFormat(sent)
+    trainer.append(result['features'],result['labels'])
+
+trainer.train('model.crf.tagger')
+
+#ct = CRFTagger()
+#ct.train(processedTokens,'model.crf.tagger')
+
+tagger = pycrfsuite.Tagger()
+
+publicTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-public"
+privateTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-private"
 
 
-publicTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-public"
-privateTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-private"
+
+#publicTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-public"
+#privateTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-private"
 
 
 #privateTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-private"
-publicResult = performTagging(ct, publicTestFolder)
-privateResult = performTagging(ct, privateTestFolder)
+publicResult = performTagging(tagger, publicTestFolder)
+#privateResult = performTagging(ct, privateTestFolder)
 #privateResult = performTagging(tagger, privateTestFolder, "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/baseline2ResultsPrivate")
 
-with open('predictionPhrase.csv', 'w') as csvfile:
-    fieldnames = ['Type', 'Spans']
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    writer.writeheader()
-    writer.writerow({'Type': 'CUE-public', 'Spans': publicResult["phraseRanges"]})
-    writer.writerow({'Type': 'CUE-private', 'Spans': privateResult["phraseRanges"]})
+#with open('predictionPhrase.csv', 'w') as csvfile:
+ #   fieldnames = ['Type', 'Spans']
+  #  writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+   # writer.writeheader()
+   # writer.writerow({'Type': 'CUE-public', 'Spans': publicResult["phraseRanges"]})
+   # writer.writerow({'Type': 'CUE-private', 'Spans': privateResult["phraseRanges"]})
 
 
 
@@ -159,5 +210,5 @@ with open('predictionPhrase.csv', 'w') as csvfile:
 #    writer.writerow({'Type': 'SENTENCE-private', 'Indices': privateResult["sentenceRanges"]})
 
 
-    
+
 
