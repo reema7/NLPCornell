@@ -82,85 +82,81 @@ def preprocessForTagging(testFolder):
     for root, dirs, files in os.walk(testFolder, topdown=True):
         for fileName in fnmatch.filter(files, '*.txt'):
             file = open(os.path.join(testFolder, fileName), 'r')
+            if len(sentence) > 0:
+                listSentences.append(sentence)
+                sentence = []
             for line in file:
                 lineTokens = line.split()
                 if (len(lineTokens) >= 2):
                     if lineTokens[0]=='.':
+                        sentence.append(lineTokens[0].decode('utf-8'))
                         listSentences.append(sentence)
+                        sentence = []
                     else:
                         sentence.append(lineTokens[0].decode('utf-8'))
     return listSentences
 
 
 
+def performTagging(ct, testFolder):
 
-def performTagging(tagger, testFolder, outputFolder):
+    testSentences = preprocessForTagging(testFolder)
+    taggedSentences = ct.tag_sents(testSentences)
+    tag = "null"
     tokenId = 0
-    sentenceId = 0
-    foundInCurrentSentence = "false"
     uncertainRanges = ""
-    uncertainSentenceRange = ""
     rangeStart = -1
     rangeEnd = -1
-    for root, dirs, files in os.walk(testFolder, topdown=True):
-        for fileName in fnmatch.filter(files, '*.txt'):
-            fileTokens = []
-            counter = 1
-            tag = "null"
-            file = open(os.path.join(testFolder, fileName), 'r')
-            for line in file:
-                lineTokens = line.split()
-                if(len(lineTokens) >= 2):
-                    word = lineTokens[0] + " " + lineTokens[1]
-                    fileTokens.append(word)
+    for sentence in taggedSentences:
+        for word in sentence:
+            prevTag = tag
+            tag = word[1]
+            if("B-CUE" in tag):
+                rangeStart = tokenId
+                rangeEnd = tokenId
 
-            tagging = tagger.tag_sents(fileTokens)
-            newFile = open(outputFolder + "/" + fileName, "w")
-            for tupple in tagging:
-                input = tupple[0]
-                if ". ." in input:
-                    if foundInCurrentSentence is "true":
-                        uncertainSentenceRange = uncertainSentenceRange + str(sentenceId) + " "
-                        foundInCurrentSentence = "false"
-                    sentenceId = sentenceId + 1
-                prevTag = tag
-                tag = tupple[1]
-                if("B-CUE" in tag):
-                    tag = "CUE-" + str(counter)
-                    rangeStart = tokenId
-                    rangeEnd = tokenId
-                    foundInCurrentSentence = "true"
-                elif("I-CUE" in tag):
-                    tag = "CUE-" + str(counter)
-                    rangeEnd = tokenId
-                elif("O-CUE" in tag):
-                    tag = "_"
-                    if ("CUE" in prevTag):
-                        counter += 1
-                        uncertainRanges = uncertainRanges + str(rangeStart) + "-" + str(rangeEnd) + " "
-                newFile.write(input + " " + tag + "\n")
-                tokenId += 1
-            newFile.close()
+            elif("I-CUE" in tag):
+                rangeEnd = tokenId
+            elif("O-CUE" in tag):
+                tag = "_"
+                if ("CUE" in prevTag):
+                    uncertainRanges = uncertainRanges + str(rangeStart) + "-" + str(rangeEnd) + " "
+            tokenId += 1
     returnData = {}
     returnData["phraseRanges"] = uncertainRanges
-    returnData["sentenceRanges"] = uncertainSentenceRange
+    #returnData["sentenceRanges"] = uncertainSentenceRange
     return returnData
 
-pathToTrainingData = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/train"
+pathToTrainingData = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/train"
 processedTokens = preProcessingOld(pathToTrainingData)
 ct = CRFTagger()
 ct.train(processedTokens,'model.crf.tagger')
 
-publicTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-public"
-testSentences = preprocessForTagging(publicTestFolder)
 
-taggedSentences  = ct.tag_sents(testSentences)
+publicTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-public"
+privateTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-private"
+
 
 #privateTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-private"
-#publicResult = performTagging(ct, publicTestFolder, "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/baseline3Results")
+publicResult = performTagging(ct, publicTestFolder)
+privateResult = performTagging(ct, privateTestFolder)
 #privateResult = performTagging(tagger, privateTestFolder, "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/baseline2ResultsPrivate")
 
+with open('predictionPhrase.csv', 'w') as csvfile:
+    fieldnames = ['Type', 'Spans']
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerow({'Type': 'CUE-public', 'Spans': publicResult["phraseRanges"]})
+    writer.writerow({'Type': 'CUE-private', 'Spans': privateResult["phraseRanges"]})
 
+
+
+#with open('predictionSentence.csv', 'w') as csvfile:
+#    fieldnames = ['Type', 'Indices']
+#    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+#    writer.writeheader()
+#    writer.writerow({'Type': 'SENTENCE-public', 'Indices': publicResult["sentenceRanges"]})
+#    writer.writerow({'Type': 'SENTENCE-private', 'Indices': privateResult["sentenceRanges"]})
 
 
     
