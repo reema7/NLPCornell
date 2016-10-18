@@ -1,8 +1,6 @@
 import os
 
 import fnmatch
-import nltk
-from nltk.tag import hmm
 
 
 import csv
@@ -25,6 +23,7 @@ class BaselineDictBuilder:
         for line in dictionaryFile:
            word = line.split()[0]
            self.map[word] = self.map.get(word, 1)
+
 
 def preProcessing(pathToTrainingData):
     outputFile = open("processedFile.txt","w")
@@ -82,6 +81,7 @@ def preProcessingOld(pathToTrainingData):
                 else:
                     isCueFirst = True
                     tokens[2] = outsideTag
+
                 join = tokens[0].decode('utf-8')+" "+tokens[1].decode('utf-8')+" "+tokens[2].decode('utf-8')
                 lineList.append(join)
                 if (tokens[0] is "."):
@@ -110,7 +110,46 @@ def preprocessForTagging(testFolder):
                         sentence.append(lineTokens[0].decode('utf-8')+" "+lineTokens[1].decode('utf-8'))
     return listSentences
 
+def convertCRFFormatFeatures(sent):
+    features = []
+    for line in sent:
+        featureList = []
+        tokens = line.split()
+        if(len(tokens)==2):
+            word = tokens[0]
+            featureList.append("WORD" + word)
+            featureList.append(tokens[1])
+            features.append(featureList)
+    return features
 
+
+def convertCRFFormat(sent):
+    labels = []
+    features = []
+    result = {}
+    for line in sent:
+        featureList = []
+        tokens = line.split()
+        labels.append(tokens[2])
+        word = tokens[0]
+        featureList.append("WORD"+word)
+        featureList.append(tokens[1])
+        features.append(featureList)
+    result['labels'] = labels
+    result['features'] = features
+    return  result
+
+def newTagging(tagger,testFolder):
+    result = []
+    testSentences = preprocessForTagging(testFolder)
+    for tokens in testSentences:
+        features = convertCRFFormatFeatures(tokens)
+        labels = tagger.tag(features)
+        taggedSentence = list(zip(tokens,labels))
+        result.append(taggedSentence)
+    return result
+
+def performTagging(tagger, testFolder):
 
 def performTagging(ct, testFolder, dictionaryBuilder):
 
@@ -162,22 +201,30 @@ processedTokens = preProcessingOld(pathToTrainingData)
 ct = newCRFFile.CRFTagger()
 ct.train(processedTokens,'model.crf.tagger')
 
+#ct = CRFTagger()
+#ct.train(processedTokens,'model.crf.tagger')
 
-publicTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-public"
-privateTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-private"
+publicTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-public"
+privateTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-private"
+
+
+
+#publicTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-public"
+#privateTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-private"
 
 
 #privateTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-private"
+
 publicResult = performTagging(ct, publicTestFolder, dictionaryBuilder)
 privateResult = performTagging(ct, privateTestFolder, dictionaryBuilder)
 #privateResult = performTagging(tagger, privateTestFolder, "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/baseline2ResultsPrivate")
 
-with open('predictionPhrase.csv', 'w') as csvfile:
-    fieldnames = ['Type', 'Spans']
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    writer.writeheader()
-    writer.writerow({'Type': 'CUE-public', 'Spans': publicResult["phraseRanges"]})
-    writer.writerow({'Type': 'CUE-private', 'Spans': privateResult["phraseRanges"]})
+#with open('predictionPhrase.csv', 'w') as csvfile:
+ #   fieldnames = ['Type', 'Spans']
+  #  writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+   # writer.writeheader()
+   # writer.writerow({'Type': 'CUE-public', 'Spans': publicResult["phraseRanges"]})
+   # writer.writerow({'Type': 'CUE-private', 'Spans': privateResult["phraseRanges"]})
 
 with open('predictionSentence.csv', 'w') as csvfile:
     fieldnames = ['Type', 'Indices']
@@ -195,5 +242,5 @@ with open('predictionSentence.csv', 'w') as csvfile:
     writer.writerow({'Type': 'SENTENCE-private', 'Indices': privateResult["sentenceRanges"]})
 
 
-    
+
 
