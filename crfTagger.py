@@ -149,8 +149,6 @@ def newTagging(tagger,testFolder):
         result.append(taggedSentence)
     return result
 
-def performTagging(tagger, testFolder):
-
 def performTagging(ct, testFolder, dictionaryBuilder):
 
     testSentences = preprocessForTagging(testFolder)
@@ -204,13 +202,10 @@ ct.train(processedTokens,'model.crf.tagger')
 #ct = CRFTagger()
 #ct.train(processedTokens,'model.crf.tagger')
 
-publicTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-public"
-privateTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-private"
 
 
-
-#publicTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-public"
-#privateTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-private"
+publicTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-public"
+privateTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-private"
 
 
 #privateTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-private"
@@ -219,19 +214,19 @@ publicResult = performTagging(ct, publicTestFolder, dictionaryBuilder)
 privateResult = performTagging(ct, privateTestFolder, dictionaryBuilder)
 #privateResult = performTagging(tagger, privateTestFolder, "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/baseline2ResultsPrivate")
 
-#with open('predictionPhrase.csv', 'w') as csvfile:
- #   fieldnames = ['Type', 'Spans']
-  #  writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-   # writer.writeheader()
-   # writer.writerow({'Type': 'CUE-public', 'Spans': publicResult["phraseRanges"]})
-   # writer.writerow({'Type': 'CUE-private', 'Spans': privateResult["phraseRanges"]})
-
-with open('predictionSentence.csv', 'w') as csvfile:
-    fieldnames = ['Type', 'Indices']
+with open('predictionPhrase.csv', 'w') as csvfile:
+    fieldnames = ['Type', 'Spans']
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
-    writer.writerow({'Type': 'SENTENCE-public', 'Indices': publicResult["sentenceRanges"]})
-    writer.writerow({'Type': 'SENTENCE-private', 'Indices': privateResult["sentenceRanges"]})
+    writer.writerow({'Type': 'CUE-public', 'Spans': publicResult["phraseRanges"]})
+    writer.writerow({'Type': 'CUE-private', 'Spans': privateResult["phraseRanges"]})
+
+#with open('predictionSentence.csv', 'w') as csvfile:
+#    fieldnames = ['Type', 'Indices']
+#    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+#    writer.writeheader()
+#    writer.writerow({'Type': 'SENTENCE-public', 'Indices': publicResult["sentenceRanges"]})
+#    writer.writerow({'Type': 'SENTENCE-private', 'Indices': privateResult["sentenceRanges"]})
 
 
 with open('predictionSentence.csv', 'w') as csvfile:
