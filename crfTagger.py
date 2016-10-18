@@ -8,7 +8,23 @@ from nltk.tag import hmm
 import csv
 
 
-from nltk.tag import CRFTagger
+import newCRFFile
+class BaselineDictBuilder:
+    map = {}
+    def buildBaselineDict(self, pathToTrainingData):
+        baselineDictionary = open("baselineDictionary.txt", "w")
+        for root, dirs, files in os.walk(pathToTrainingData, topdown=True):
+            for fileName in fnmatch.filter(files, '*.txt'):
+                file = open(os.path.join(pathToTrainingData,fileName), 'r')
+                for line in file:
+                    if "CUE" in line:
+                        baselineDictionary.write(line.split()[0] + "\n")
+
+    def buildDictMap(self):
+        dictionaryFile= open("baselineDictionary.txt", "r")
+        for line in dictionaryFile:
+           word = line.split()[0]
+           self.map[word] = self.map.get(word, 1)
 
 def preProcessing(pathToTrainingData):
     outputFile = open("processedFile.txt","w")
@@ -66,10 +82,8 @@ def preProcessingOld(pathToTrainingData):
                 else:
                     isCueFirst = True
                     tokens[2] = outsideTag
-                stringJoin1 = tokens[0]
-                stringJoin2 = tokens[2]
-                tupple = (stringJoin1.decode('utf-8'), stringJoin2.decode('utf-8'))
-                lineList.append(tupple)
+                join = tokens[0].decode('utf-8')+" "+tokens[1].decode('utf-8')+" "+tokens[2].decode('utf-8')
+                lineList.append(join)
                 if (tokens[0] is "."):
                     trainingList.append(lineList)
                     lineList = []
@@ -87,34 +101,45 @@ def preprocessForTagging(testFolder):
                 sentence = []
             for line in file:
                 lineTokens = line.split()
-                if (len(lineTokens) >= 2):
+                if (len(lineTokens) == 2):
                     if lineTokens[0]=='.':
-                        sentence.append(lineTokens[0].decode('utf-8'))
+                        sentence.append(lineTokens[0].decode('utf-8')+" "+lineTokens[1].decode('utf-8'))
                         listSentences.append(sentence)
                         sentence = []
                     else:
-                        sentence.append(lineTokens[0].decode('utf-8'))
+                        sentence.append(lineTokens[0].decode('utf-8')+" "+lineTokens[1].decode('utf-8'))
     return listSentences
 
 
 
-def performTagging(ct, testFolder):
+def performTagging(ct, testFolder, dictionaryBuilder):
 
     testSentences = preprocessForTagging(testFolder)
     taggedSentences = ct.tag_sents(testSentences)
     tag = "null"
     tokenId = 0
+    sentenceId = 0
     uncertainRanges = ""
+    foundInCurrentSentence = "false"
+    uncertainSentenceRange = ""
     rangeStart = -1
     rangeEnd = -1
     for sentence in taggedSentences:
         for word in sentence:
+            actualWord = word[0].split()[0].encode("utf-8")
+            if(actualWord in dictionaryBuilder.map):
+                foundInCurrentSentence = "true"
+            if ". ." in word[0]:
+                if foundInCurrentSentence is "true":
+                    uncertainSentenceRange = uncertainSentenceRange + str(sentenceId) + " "
+                    foundInCurrentSentence = "false"
+                sentenceId = sentenceId + 1
             prevTag = tag
             tag = word[1]
             if("B-CUE" in tag):
                 rangeStart = tokenId
                 rangeEnd = tokenId
-
+                foundInCurrentSentence = "true"
             elif("I-CUE" in tag):
                 rangeEnd = tokenId
             elif("O-CUE" in tag):
@@ -124,12 +149,17 @@ def performTagging(ct, testFolder):
             tokenId += 1
     returnData = {}
     returnData["phraseRanges"] = uncertainRanges
-    #returnData["sentenceRanges"] = uncertainSentenceRange
+    returnData["sentenceRanges"] = uncertainSentenceRange
     return returnData
+
+#building baseline dictionary
+dictionaryBuilder = BaselineDictBuilder()
+dictionaryBuilder.buildDictMap()
+
 
 pathToTrainingData = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/train"
 processedTokens = preProcessingOld(pathToTrainingData)
-ct = CRFTagger()
+ct = newCRFFile.CRFTagger()
 ct.train(processedTokens,'model.crf.tagger')
 
 
@@ -138,8 +168,8 @@ privateTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_proje
 
 
 #privateTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-private"
-publicResult = performTagging(ct, publicTestFolder)
-privateResult = performTagging(ct, privateTestFolder)
+publicResult = performTagging(ct, publicTestFolder, dictionaryBuilder)
+privateResult = performTagging(ct, privateTestFolder, dictionaryBuilder)
 #privateResult = performTagging(tagger, privateTestFolder, "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/baseline2ResultsPrivate")
 
 with open('predictionPhrase.csv', 'w') as csvfile:
@@ -149,14 +179,20 @@ with open('predictionPhrase.csv', 'w') as csvfile:
     writer.writerow({'Type': 'CUE-public', 'Spans': publicResult["phraseRanges"]})
     writer.writerow({'Type': 'CUE-private', 'Spans': privateResult["phraseRanges"]})
 
+with open('predictionSentence.csv', 'w') as csvfile:
+    fieldnames = ['Type', 'Indices']
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerow({'Type': 'SENTENCE-public', 'Indices': publicResult["sentenceRanges"]})
+    writer.writerow({'Type': 'SENTENCE-private', 'Indices': privateResult["sentenceRanges"]})
 
 
-#with open('predictionSentence.csv', 'w') as csvfile:
-#    fieldnames = ['Type', 'Indices']
-#    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-#    writer.writeheader()
-#    writer.writerow({'Type': 'SENTENCE-public', 'Indices': publicResult["sentenceRanges"]})
-#    writer.writerow({'Type': 'SENTENCE-private', 'Indices': privateResult["sentenceRanges"]})
+with open('predictionSentence.csv', 'w') as csvfile:
+    fieldnames = ['Type', 'Indices']
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerow({'Type': 'SENTENCE-public', 'Indices': publicResult["sentenceRanges"]})
+    writer.writerow({'Type': 'SENTENCE-private', 'Indices': privateResult["sentenceRanges"]})
 
 
     
