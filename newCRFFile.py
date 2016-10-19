@@ -143,14 +143,79 @@ class CRFTagger(TaggerI):
 
     def convertCRFFormatFeatures(self, sent):
         features = []
+
+        POSPerLine = []
+        wordPerLine = []
+
+        listSize = len(sent)
+
         for line in sent:
-            featureList = []
             tokens = line.split()
-            if (len(tokens) == 2):
-                word = tokens[0]
-                featureList.append("WORD" + word)
-                featureList.append(tokens[1])
-                features.append(featureList)
+            POSPerLine.append(tokens[1])
+            wordPerLine.append(tokens[0])
+
+        for counter in range(0, len(sent)):
+            featureList = []
+
+            featureList.append("WORD[0]" + wordPerLine[counter])
+            featureList.append("POS[0]" + POSPerLine[counter])
+            if counter>1:
+                featureList.append("POS[-2]" + POSPerLine[counter-2])
+                featureList.append("POS[-1]" + POSPerLine[counter-1])
+                featureList.append("WORD[-2]" + wordPerLine[counter-2])
+                featureList.append("WORD[-1]" + wordPerLine[counter-1])
+                featureList.append("WORD[-1]|WORD[0]" + wordPerLine[counter - 1]+"|"+wordPerLine[counter])
+                featureList.append("POS[-2]|POS[-1]" + POSPerLine[counter - 2] + "|" + POSPerLine[counter - 1])
+                featureList.append("POS[-1]|POS[0]" + POSPerLine[counter - 1] + "|" + POSPerLine[counter])
+                featureList.append("POS[-2]|POS[-1]|POS[0]" + POSPerLine[counter - 2] + "|" + POSPerLine[counter - 1] + "|" + POSPerLine[counter])
+
+            elif counter>0:
+                featureList.append("POS[-2]" + "<p>")
+                featureList.append("POS[-1]" + POSPerLine[counter - 1])
+                featureList.append("WORD[-2]" + "<W>")
+                featureList.append("WORD[-1]" + wordPerLine[counter - 1])
+                featureList.append("WORD[-1]|WORD[0]" + wordPerLine[counter - 1] + "|" + wordPerLine[counter])
+                featureList.append("POS[-2]|POS[-1]" + "<p>" + "|" + POSPerLine[counter-1])
+                featureList.append("POS[-1]|POS[0]" + POSPerLine[counter - 1] + "|" + POSPerLine[counter])
+                featureList.append("POS[-2]|POS[-1]|POS[0]" + "<p>" + "|" + POSPerLine[counter - 1] + "|" + POSPerLine[counter])
+
+            else:
+                featureList.append("POS[-2]"+ "<p>")
+                featureList.append("POS[-1]" + "<p>")
+                featureList.append("WORD[-2]" + "<W>")
+                featureList.append("WORD[-1]" + "<W>")
+                featureList.append("WORD[-1]|WORD[0]" + "<w>|" + wordPerLine[counter])
+                featureList.append("POS[-2]|POS[-1]" + "<p>" + "|" + "<p>")
+                featureList.append("POS[-1]|POS[0]" + "<p>" + "|" + POSPerLine[counter])
+                featureList.append("POS[-2]|POS[-1]|POS[0]" + "<p>" + "|" + "<p>" + "|" + POSPerLine[counter])
+
+            if counter < listSize -2:
+                featureList.append("POS[2]" + POSPerLine[counter + 2])
+                featureList.append("POS[1]" + POSPerLine[counter + 1])
+                featureList.append("WORD[2]" + wordPerLine[counter + 2])
+                featureList.append("WORD[1]" + wordPerLine[counter + 1])
+                featureList.append("POS[2]|POS[1]" + POSPerLine[counter+2] + "|" + POSPerLine[counter+1])
+                featureList.append("POS[1]|POS[0]" + POSPerLine[counter+1] + "|" + POSPerLine[counter])
+                featureList.append("POS[2]|POS[1]|POS[0]" + POSPerLine[counter+2] + "|" + POSPerLine[counter+1] + "|" + POSPerLine[counter])
+            elif counter < listSize - 1:
+                featureList.append("POS[2]" + "</p>")
+                featureList.append("POS[1]" + POSPerLine[counter + 1])
+                featureList.append("WORD[2]" + "</W>")
+                featureList.append("WORD[1]" + wordPerLine[counter + 1])
+                featureList.append("POS[2]|POS[1]" + "</p>" + "|" + POSPerLine[counter+1])
+                featureList.append("POS[1]|POS[0]" + POSPerLine[counter+1] + "|" + POSPerLine[counter])
+                featureList.append("POS[2]|POS[1]|POS[0]" + "</p>" + "|" + POSPerLine[counter+1] + "|" + POSPerLine[counter])
+            else:
+                featureList.append("POS[2]" + "</p>")
+                featureList.append("POS[1]" + "</p>")
+                featureList.append("WORD[2]" + "</W>")
+                featureList.append("WORD[1]" + "</W>")
+                featureList.append("POS[2]|POS[1]" + "</p>" + "|" + "</p>")
+                featureList.append("POS[1]|POS[0]" + "</p>" + "|" + POSPerLine[counter])
+                featureList.append("POS[2]|POS[1]|POS[0]" + "</p>" + "|" + "</p>" + "|" + POSPerLine[counter])
+
+            features.append(featureList)
+
         return features
 
     def tag_sents(self, sents):
@@ -184,13 +249,80 @@ class CRFTagger(TaggerI):
         labels = []
         features = []
         result = {}
+
+        labelPerLine = []
+        POSPerLine = []
+        wordPerLine = []
+
+        listSize = len(sent)
+
         for line in sent:
-            featureList = []
             tokens = line.split()
-            labels.append(tokens[2])
-            word = tokens[0]
-            featureList.append("WORD" + word)
-            featureList.append(tokens[1])
+            labelPerLine.append(tokens[2])
+            POSPerLine.append(tokens[1])
+            wordPerLine.append(tokens[0])
+
+        for counter in range(0,len(sent)):
+            featureList = []
+            labels.append(labelPerLine[counter])
+            featureList.append("WORD[0]" + wordPerLine[counter])
+            featureList.append("POS[0]" + POSPerLine[counter])
+            if counter>1:
+                featureList.append("POS[-2]" + POSPerLine[counter-2])
+                featureList.append("POS[-1]" + POSPerLine[counter-1])
+                featureList.append("WORD[-2]" + wordPerLine[counter-2])
+                featureList.append("WORD[-1]" + wordPerLine[counter-1])
+                featureList.append("WORD[-1]|WORD[0]" + wordPerLine[counter - 1]+"|"+wordPerLine[counter])
+                featureList.append("POS[-2]|POS[-1]" + POSPerLine[counter - 2] + "|" + POSPerLine[counter - 1])
+                featureList.append("POS[-1]|POS[0]" + POSPerLine[counter - 1] + "|" + POSPerLine[counter])
+                featureList.append("POS[-2]|POS[-1]|POS[0]" + POSPerLine[counter - 2] + "|" + POSPerLine[counter - 1] + "|" + POSPerLine[counter])
+
+            elif counter>0:
+                featureList.append("POS[-2]" + "<p>")
+                featureList.append("POS[-1]" + POSPerLine[counter - 1])
+                featureList.append("WORD[-2]" + "<W>")
+                featureList.append("WORD[-1]" + wordPerLine[counter - 1])
+                featureList.append("WORD[-1]|WORD[0]" + wordPerLine[counter - 1] + "|" + wordPerLine[counter])
+                featureList.append("POS[-2]|POS[-1]" + "<p>" + "|" + POSPerLine[counter-1])
+                featureList.append("POS[-1]|POS[0]" + POSPerLine[counter - 1] + "|" + POSPerLine[counter])
+                featureList.append("POS[-2]|POS[-1]|POS[0]" + "<p>" + "|" + POSPerLine[counter - 1] + "|" + POSPerLine[counter])
+
+            else:
+                featureList.append("POS[-2]"+ "<p>")
+                featureList.append("POS[-1]" + "<p>")
+                featureList.append("WORD[-2]" + "<W>")
+                featureList.append("WORD[-1]" + "<W>")
+                featureList.append("WORD[-1]|WORD[0]" + "<w>|" + wordPerLine[counter])
+                featureList.append("POS[-2]|POS[-1]" + "<p>" + "|" + "<p>")
+                featureList.append("POS[-1]|POS[0]" + "<p>" + "|" + POSPerLine[counter])
+                featureList.append("POS[-2]|POS[-1]|POS[0]" + "<p>" + "|" + "<p>" + "|" + POSPerLine[counter])
+
+            if counter < listSize -2:
+                featureList.append("POS[2]" + POSPerLine[counter + 2])
+                featureList.append("POS[1]" + POSPerLine[counter + 1])
+                featureList.append("WORD[2]" + wordPerLine[counter + 2])
+                featureList.append("WORD[1]" + wordPerLine[counter + 1])
+                featureList.append("POS[2]|POS[1]" + POSPerLine[counter+2] + "|" + POSPerLine[counter+1])
+                featureList.append("POS[1]|POS[0]" + POSPerLine[counter+1] + "|" + POSPerLine[counter])
+                featureList.append("POS[2]|POS[1]|POS[0]" + POSPerLine[counter+2] + "|" + POSPerLine[counter+1] + "|" + POSPerLine[counter])
+            elif counter < listSize - 1:
+                featureList.append("POS[2]" + "</p>")
+                featureList.append("POS[1]" + POSPerLine[counter + 1])
+                featureList.append("WORD[2]" + "</W>")
+                featureList.append("WORD[1]" + wordPerLine[counter + 1])
+                featureList.append("POS[2]|POS[1]" + "</p>" + "|" + POSPerLine[counter+1])
+                featureList.append("POS[1]|POS[0]" + POSPerLine[counter+1] + "|" + POSPerLine[counter])
+                featureList.append("POS[2]|POS[1]|POS[0]" + "</p>" + "|" + POSPerLine[counter+1] + "|" + POSPerLine[counter])
+            else:
+                featureList.append("POS[2]" + "</p>")
+                featureList.append("POS[1]" + "</p>")
+                featureList.append("WORD[2]" + "</W>")
+                featureList.append("WORD[1]" + "</W>")
+                featureList.append("POS[2]|POS[1]" + "</p>" + "|" + "</p>")
+                featureList.append("POS[1]|POS[0]" + "</p>" + "|" + POSPerLine[counter])
+                featureList.append("POS[2]|POS[1]|POS[0]" + "</p>" + "|" + "</p>" + "|" + POSPerLine[counter])
+
+
             features.append(featureList)
         result['labels'] = labels
         result['features'] = features

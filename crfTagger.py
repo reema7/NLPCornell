@@ -194,7 +194,7 @@ dictionaryBuilder = BaselineDictBuilder()
 dictionaryBuilder.buildDictMap()
 
 
-pathToTrainingData = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/train"
+pathToTrainingData = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/train"
 processedTokens = preProcessingOld(pathToTrainingData)
 ct = newCRFFile.CRFTagger()
 ct.train(processedTokens,'model.crf.tagger')
@@ -204,8 +204,8 @@ ct.train(processedTokens,'model.crf.tagger')
 
 
 
-publicTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-public"
-privateTestFolder = "/Users/shraddha/Documents/Semester 2/NLP/Project2/nlp_project2_uncertainty/test-private"
+publicTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-public"
+privateTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-private"
 
 
 #privateTestFolder = "C:/Users/Reema Bajwa/PycharmProjects/Project2/nlp_project2_uncertainty/test-private"
